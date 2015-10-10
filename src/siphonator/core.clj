@@ -1,11 +1,6 @@
 (ns siphonator.core
   (:gen-class))
 
-(defn api-string
-  "takes details for an API string and makes into a suitable API querystring"
-  [api vcode]
-  (str "&api=" api "&vcode=" vcode))
-
 (defn make-fuelmap
   "Takes a container ID and the two subsequent seqs, then turns them into
   a clojure map"
