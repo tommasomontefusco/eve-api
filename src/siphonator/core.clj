@@ -1,11 +1,10 @@
 (ns siphonator.core
   (:gen-class))
 
-(defn test-emacs-as-editor
-  "simple and dumb test function to see if everything works as planned."
-  ([] (println "no args"))
-  ([x] (println (str "echoing number: " x)) x)
-  ([x y] (println (str "adding both numbers: " (+ x y)))))
+(defn api-string
+  "takes details for an API string and makes into a suitable API querystring"
+  [api vcode]
+  (str "&api=" api "&vcode=" vcode))
 
 (defn make-fuelmap
   "Takes a container ID and the two subsequent seqs, then turns them into
