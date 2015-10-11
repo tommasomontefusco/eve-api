@@ -2,7 +2,10 @@
   (:gen-class)
   (:require [clojure.xml :as xml]
             [clojure.zip :as zip]
-            [clj-http.client :as client])
+            [clj-http.client :as client]
+            [clojure.core.memoize :as memo]
+            [clj-time.core :as joda-time]
+            [clj-time.format :as joda-format])
   (:import (java.io ByteArrayInputStream)))
 
 (defn xml-to-map [s]
@@ -12,7 +15,7 @@
 (defn create-default-header-map
   "Creates a default header mapping to us with `raw-http-get`"
   {:client-params {"http.useragent" "eve-xml library for Clojure. Cobbled
-  together by Az, email: az4reus@gmail.com"}})
+  together by Az, email: az4reus@gmail.com. Come say hi :3"}})
 
 (defn append-api-string
   "Simple helper method to append the API verification string at the end of
@@ -52,12 +55,28 @@
 ;; for current arg vector, making it ideal for clearing individual calls. :3
 
 (def cached-raw-api-call (memoize raw-http-get))
-(def api-cache (atom {}))
+(def api-expiration-cache (atom {}))
 
+(defn update-cache
+  "updates the `api-exiration-cache` with a new value for any given request.
+  Will pick out the value from a full request, then re-emit that map."
+  [request]
+  (throw (IllegalStateException. "Not implemented properly yet.")))
+
+(defn is-expired?
+  "compares local time to the expiration time given in the expiration cache"
+  [previous-date]
+  (let [now joda-time/now]
+    (joda-time/after? now previous-date)))
+
+;; TODO add caching to returning calls from expiration date in the XML
 (defn api-request
   [request-url & {headers :headers}]
-  (let [cache @api-cache]
-    ))
+  (let [cache @api-expiration-cache]
+    (if (is-expired? (get cache request-url))
+      (do (memo/memo-clear! cached-raw-api-call request-url)
+          (cached-raw-api-call request-url headers))
+      (cached-raw-api-call request-url headers))))
 
 
 ;; high-level interface, the friendly part.
