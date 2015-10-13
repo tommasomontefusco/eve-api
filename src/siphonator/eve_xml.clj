@@ -14,6 +14,7 @@
 
 (defn create-default-header-map
   "Creates a default header mapping to us with `raw-http-get`"
+  []
   {:client-params {"http.useragent" "eve-xml library for Clojure. Cobbled
   together by Az, email: az4reus@gmail.com. Come say hi :3"}})
 
