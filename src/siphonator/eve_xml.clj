@@ -8,15 +8,15 @@
             [clj-time.format :as joda-format])
   (:import (java.io ByteArrayInputStream)))
 
-(defn xml-to-map [s]
-  (zip/xml-zip
-    (xml/parse (ByteArrayInputStream. (.getBytes s)))))
-
+;; I don't really need to test this, do I?
 (defn create-default-header-map
   "Creates a default header mapping to us with `raw-http-get`"
   []
   {:client-params {"http.useragent" "eve-xml library for Clojure. Cobbled
   together by Az, email: az4reus@gmail.com. Come say hi :3"}})
+
+;; Make request URLs. Just some basic composition stuff.
+;; ============================================================================
 
 (defn append-api-string
   "Simple helper method to append the API verification string at the end of
@@ -36,10 +36,24 @@
   (str "https://api.eveonline.com/" xml-api ".xml.aspx"))
 
 (defn create-api-authenticated-call
+(defn create-authenticated-url
   "Composition of a few functions to make authed calls easier"
   [xml-api api-key v-code]
   (-> (make-request-url xml-api)
       (append-api-string api-key v-code)))
+
+(defn create-character-authenticated-url
+  "Makes a full personal query, API and character ID"
+  [xml-api api-key v-code char-id]
+  (-> (create-authenticated-url xml-api api-key v-code)
+      (append-character-id char-id)))
+
+;; Impure I/O stuff, mostly concerned with handling the calls and the XML.
+;; ============================================================================
+
+(defn xml-to-map [s]
+  (zip/xml-zip
+    (xml/parse (ByteArrayInputStream. (.getBytes s)))))
 
 (defn raw-http-get
   "Uses clj-http to send a GET request to the URL. Header-map optional,
