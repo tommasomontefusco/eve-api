@@ -1,7 +1,8 @@
 (ns siphonator.core
   (:gen-class)
   (:require [clojure.xml :as xml]
-            [clojure.zip :as zip]))
+            [clojure.zip :as zip])
+  (:import (java.io ByteArrayInputStream)))
 
 (defn make-fuelmap
   "Takes a container ID and the two subsequent seqs, then turns them into
@@ -13,9 +14,10 @@
    :items items
    :quantities quantities})
 
-(defn zip-str [s]
+(defn zip-str
+  [s]
   (zip/xml-zip
-    (xml/parse (java.io.ByteArrayInputStream. (.getBytes s)))))
+    (xml/parse (ByteArrayInputStream. (.getBytes s)))))
 
 ;; Main function. Please keep at the last spot <3
 
