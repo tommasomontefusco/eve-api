@@ -47,3 +47,6 @@
               </child>
             </parent>")))))
 
+(deftest expiration-cache-test
+  (testing "Does the cache get updated correctly if we throw values at it?"
+    ))

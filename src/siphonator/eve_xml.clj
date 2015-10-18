@@ -12,7 +12,8 @@
   "Creates a default header mapping to us with `raw-http-get`"
   []
   {:client-params {"http.useragent" "eve-xml library for Clojure. Cobbled
-  together by Az, email: az4reus@gmail.com. Come say hi :3"}})
+  together by Az, email: az4reus@gmail.com. I also hang out on Tweetfleet Slack,
+  tell Foxfour to poke me. Come say hi :3"}})
 
 ;; Make request URLs. Just some basic composition stuff.
 ;; ============================================================================
@@ -57,13 +58,29 @@
 
 (def api-expiration-cache (atom {}))
 
+(defn parse-timestamp
+  "Extracts the timestamp from the full xml result. Returns"
+  [timestamp]
+  (joda-format/parse (joda-format/formatters :mysql) timestamp))
+
+(defn store-timestamp-in-cache
+  "Stores the timestamp in the expiration cache, parsed from the XML"
+  [request-url timestamp]
+  (swap! api-expiration-cache assoc request-url timestamp))
+
+(defn extract-timestamp-from-xml
+  "Simply walks the XML tree and extracts the timestamp."
+  [xml-result]
+  (-> (first xml-result)          ; XML root
+      (:content)                  ; contents of the root
+      (second)                    ; skipping `result` going to `cachedUntil`
+      (:content)))                ; grabbing timestamp
+
 (defn update-cache!
-  "updates the `api-exiration-cache` with a new value for any given request.
-  Will pick out the value from a full request, then re-emit that map."
-  [request result]
-  ((let [cache @api-expiration-cache]
-     (->> (assoc cache request result)
-          (swap! api-expiration-cache)))))
+  "Extracts and stores the timestamp from any given XML batch"
+  [request xml-result]
+  (->> (extract-timestamp-from-xml xml-result)
+       (store-timestamp-in-cache request)))
 
 (defn- raw-http-get
   "Uses clj-http to send a GET request to the URL. Header-map optional,
@@ -93,7 +110,9 @@
   "compares local time to the expiration time given in the expiration cache"
   [previous-date]
   (let [now joda-time/now]
-    (joda-time/after? now previous-date)))
+    (if (nil? previous-date)
+       true
+      (joda-time/after? now previous-date))))
 
 ;; TODO add caching to returning calls from expiration date in the XML
 (defn api-request
@@ -103,7 +122,6 @@
       (do (memo/memo-clear! memoized-raw-http-call request-url)
           (memoized-raw-http-call request-url headers))
       (do (memoized-raw-http-call request-url headers)))))
-
 
 ;; high-level interface, the friendly part.
 
@@ -117,6 +135,6 @@
   "Grbas and returns the giant XML abomination known as the soverignty
   map. Deal with ti at your own peril. At least it's cached for you.
   And it's a clojure map. Should make it somehwat easier to deal with."
-  (-> (make-request-url "eve/sovereignty")
-      (api-request)
-      (get :content)))
+  []
+  (-> (make-request-url "map/sovereignty")
+      (api-request)))
