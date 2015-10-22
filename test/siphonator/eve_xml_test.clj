@@ -49,4 +49,28 @@
 
 (deftest expiration-cache-test
   (testing "Does the cache get updated correctly if we throw values at it?"
-    ))
+    (cache-timestamp! "request" "timestamp")
+    (is
+      (= "timestamp"
+         (get api-expiration-cache "request")))))
+
+(deftest extracting-xml-timestamp
+  (let [test-xml
+        "<root>
+          <result>
+            <foo> skjdfoas </foo>
+          </result>
+          <cachedUntil>
+            2015-10-18 14:03:05
+          </cachedUntil>
+        </root>"]
+    (testing "Does it parse the timestamp correctly?"
+      (is (=
+            "2015-10-18 14:03:05"
+            (extract-xml-timestamp test-xml))))))
+
+(deftest expiration-test
+  (testing "Does time get parsed correctly from the stored timestamp?")
+    (is (= true
+           (is-expired? "2015-10-18 14:03:05"))))
+
