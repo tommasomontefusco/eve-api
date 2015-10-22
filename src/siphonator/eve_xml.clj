@@ -8,12 +8,27 @@
             [clj-time.format :as joda-format])
   (:import (java.io ByteArrayInputStream)))
 
-(defn- create-default-header-map
-  "Creates a default header mapping to us with `raw-http-get`"
-  []
-  {:client-params {"http.useragent" "eve-xml library for Clojure. Cobbled
-  together by Az, email: az4reus@gmail.com. I also hang out on Tweetfleet Slack,
-  tell Foxfour to poke me. Come say hi :3"}})
+;; Header stuff, for HTTP calls.
+;; ===========================================================================
+
+(def default-headers {:client-params {"http.useragent" "eve-xml library
+for Clojure. Cobbled together by Az, email: az4reus@gmail.com. I also hang out
+on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
+
+(def headers-cache (atom default-headers))
+
+(defn get-headers [] (@headers-cache))
+
+(defn set-headers
+  "Sets the headers that are sent with each HTTP request. Useful for when you
+  want to replace the useragent, for example, with better contact info. No
+  validation of the headers is done, but if you fuck up and get errors from
+  clj-http, send nil to this function and it will be reset to standard headers,
+  which is just a useragent."
+  [headers-map]
+  (if (nil? headers-map)
+    (reset! headers-cache default-headers)
+    (reset! headers-cache headers-map)))
 
 ;; Make request URLs. Just some basic composition stuff.
 ;; ============================================================================
@@ -79,26 +94,32 @@
   "Extracts and stores the timestamp from any given XML batch"
   [request xml-result]
   (->> (extract-xml-timestamp xml-result)
-       (cache-timestamp! request)))
+       (cache-timestamp! request))
+  xml-result)
 
-(defn- raw-http-get
-  "Uses clj-http to send a GET request to the URL. Header-map optional,
-  send with :headers. If you do not include headers, a default header
-  mapping will be used. Updates expiration dates cache, but is not memoized
-  itself. This seems counterintuitive until you realise that you shouild
-  not be using this method, hence it being private. "
-  [request-url & {headers :headers}]
-  (if (nil? headers)
-    (->> (client/get request-url (create-default-header-map))
-         (update-cache! request-url))
-    (->> (client/get request-url headers)
-         (update-cache! request-url))))
+;(defn- raw-http-get
+;  "Uses clj-http to send a GET request to the URL. Header-map optional,
+;  send with :headers. If you do not include headers, a default header
+;  mapping will be used. Updates expiration dates cache, but is not memoized
+;  itself. This seems counterintuitive until you realise that you shouild
+;  not be using this method, hence it being private. "
+;  [request-url & {headers :headers}]
+;  (if (nil? headers)
+;    (->> (client/get request-url (create-default-header-map))
+;         (update-cache! request-url))
+;    (->> (client/get request-url headers)
+;         (update-cache! request-url))))
+
+(defn raw-http-get
+  [request-url]
+  (->> (client/get request-url (get-headers))
+       (update-cache! request-url)))
 
 (def memoized-raw-http-call (memoize raw-http-get))
 
 (defn get-cached-time
   [request-url]
-  (get api-expiration-cache request-url))
+  (get @api-expiration-cache request-url))
 
 (defn cached-until
   "simply returns the cached value as a joda-time/Interval to joda-time/now."
@@ -115,12 +136,12 @@
 
 ;; TODO add caching to returning calls from expiration date in the XML
 (defn api-request
-  [request-url & {headers :headers}]
+  [request-url]
   (let [cache @api-expiration-cache]
     (if (is-expired? (get cache request-url))
       (do (memo/memo-clear! memoized-raw-http-call request-url)
-          (memoized-raw-http-call request-url headers))
-      (do (memoized-raw-http-call request-url headers)))))
+          (memoized-raw-http-call request-url))
+      (do (memoized-raw-http-call request-url)))))
 
 ;; high-level interface, the friendly part.
 
