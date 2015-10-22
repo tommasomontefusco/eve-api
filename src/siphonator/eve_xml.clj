@@ -82,16 +82,18 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
   "Stores the timestamp in the expiration cache, parsed from the XML"
   [request-url timestamp]
   (swap! api-expiration-cache conj {request-url timestamp}))
-;; TODO this is wrong. Fix apply.
 
 (defn extract-xml-timestamp
+  "Walks the XML of any eve API and extracts the timestamp. Used for caching
+  expiration dates and making sure things don't suck."
   [xml-result]
   (-> (xml-to-map xml-result)
       (get-in [0 :content 1 :content 0])
       (clojure.string/trim)))
 
 (defn update-cache!
-  "Extracts and stores the timestamp from any given XML batch"
+  "Extracts and stores the timestamp from any given XML batch. Emits entered
+  XML for returning purposes."
   [request xml-result]
   (->> (extract-xml-timestamp xml-result)
        (cache-timestamp! request))
@@ -126,7 +128,6 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
           then (parse-timestamp previous-time-str-timestamp)]
       (joda-time/after? now then))))
 
-;; TODO add caching to returning calls from expiration date in the XML
 (defn api-request
   [request-url]
   (let [cache @api-expiration-cache]
@@ -135,7 +136,8 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
           (memoized-raw-http-call request-url))
       (do (memoized-raw-http-call request-url)))))
 
-;; high-level interface, the friendly part.
+;; high-level interface, the friendly part. Use the stuff below.
+;; ===========================================================================
 
 (defn get-asset-list
   "Grabs the corp-asset list for any given api key, if available. If not, an
@@ -149,4 +151,5 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
   And it's a clojure map now. Should make it somehwat easier to deal with."
   []
   (-> (make-request-url "map/sovereignty")
-      (api-request)))
+      (api-request)
+      (xml-to-map)))
