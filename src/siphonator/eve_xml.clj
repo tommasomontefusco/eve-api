@@ -97,20 +97,12 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
        (cache-timestamp! request))
   xml-result)
 
-;(defn- raw-http-get
-;  "Uses clj-http to send a GET request to the URL. Header-map optional,
-;  send with :headers. If you do not include headers, a default header
-;  mapping will be used. Updates expiration dates cache, but is not memoized
-;  itself. This seems counterintuitive until you realise that you shouild
-;  not be using this method, hence it being private. "
-;  [request-url & {headers :headers}]
-;  (if (nil? headers)
-;    (->> (client/get request-url (create-default-header-map))
-;         (update-cache! request-url))
-;    (->> (client/get request-url headers)
-;         (update-cache! request-url))))
-
 (defn raw-http-get
+  "Uses clj-http to send a GET request to the URL. Header-map optional,
+  send with :headers. If you do not include headers, a default header
+  mapping will be used. Updates expiration dates cache, but is not memoized
+  itself. This seems counterintuitive until you realise that you shouild
+  not be using this method, hence it being private. "
   [request-url]
   (->> (client/get request-url (get-headers))
        (update-cache! request-url)))
