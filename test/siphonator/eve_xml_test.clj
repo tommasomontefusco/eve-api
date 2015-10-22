@@ -52,7 +52,7 @@
     (cache-timestamp! "request" "timestamp")
     (is
       (= "timestamp"
-         (get api-expiration-cache "request")))))
+         (get @api-expiration-cache "request")))))
 
 (deftest extracting-xml-timestamp
   (let [test-xml
