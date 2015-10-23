@@ -19,16 +19,24 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
 
 (defn get-headers [] (@headers-cache))
 
-(defn set-headers
+(defn add-header
+  "Adds a new header to the header cache, instead of replacing it wholesale,
+  like `set-headers` does."
+  ([new-header-map]
+   (swap! headers-cache conj new-header-map))
+  ([new-header-key new-header-value]
+   (swap! headers-cache conj {new-header-key new-header-value})))
+
+(defn set-headers!
   "Sets the headers that are sent with each HTTP request. Useful for when you
   want to replace the useragent, for example, with better contact info. No
-  validation of the headers is done, but if you fuck up and get errors from
-  clj-http, send nil to this function and it will be reset to standard headers,
-  which is just a useragent."
+  validation of the headers is done."
   [headers-map]
-  (if (nil? headers-map)
-    (reset! headers-cache default-headers)
-    (reset! headers-cache headers-map)))
+  (reset! headers-cache headers-map))
+
+(defn reset-headers!
+  "Simply resets the headers cache to the default (a useragent for this lib)"
+  (reset! headers-cache default-headers))
 
 ;; Make request URLs. Just some basic composition stuff.
 ;; ============================================================================
