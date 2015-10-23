@@ -21,7 +21,8 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
 
 (defn add-header
   "Adds a new header to the header cache, instead of replacing it wholesale,
-  like `set-headers` does."
+  like `set-headers` does. If your new header is in a nested map, you will
+  have to provide that path, this function uses `conj`."
   ([new-header-map]
    (swap! headers-cache conj new-header-map))
   ([new-header-key new-header-value]
@@ -54,16 +55,16 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
     (str base-request "?characterID=" character-id)
     (str base-request "&characterID=" character-id)))
 
-(defn make-request-url
+(defn create-basic-request-url
   "Another simple helper function to create the basic request url, eg
-  'eve/assets'"
-  [xml-api]
-  (str "https://api.eveonline.com/" xml-api ".xml.aspx"))
+  'map/sovereignty'"
+  [xml-api-request]
+  (str "https://api.eveonline.com/" xml-api-request ".xml.aspx"))
 
 (defn create-authenticated-url
   "Composition of a few functions to make authed calls easier"
   [xml-api api-key v-code]
-  (-> (make-request-url xml-api)
+  (-> (create-basic-request-url xml-api)
       (append-api-string api-key v-code)))
 
 (defn create-character-authenticated-url
@@ -76,13 +77,14 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
 ;; ============================================================================
 
 (defn xml-to-map [s]
+  "Helper method shamelessly copied from clojuredocs, because fuck XML parsing."
   (zip/xml-zip
     (xml/parse (ByteArrayInputStream. (.getBytes s)))))
 
 (def api-expiration-cache (atom {}))
 
 (defn parse-timestamp
-  "Extracts the timestamp from the full xml result. Returns"
+  "Extracts the timestamp from the full xml result. Returns a clj-time object."
   [timestamp]
   (joda-format/parse (joda-format/formatters :mysql) timestamp))
 
@@ -101,23 +103,20 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
 
 (defn update-cache!
   "Extracts and stores the timestamp from any given XML batch. Emits entered
-  XML for returning purposes."
+  XML for chaining purposes."
   [request xml-result]
   (->> (extract-xml-timestamp xml-result)
        (cache-timestamp! request))
   xml-result)
 
-(defn raw-http-get
-  "Uses clj-http to send a GET request to the URL. Header-map optional,
-  send with :headers. If you do not include headers, a default header
-  mapping will be used. Updates expiration dates cache, but is not memoized
-  itself. This seems counterintuitive until you realise that you shouild
-  not be using this method, hence it being private. "
+(defn cached-http-get
+  "Uses clj-http to send a GET request to the URL, with the headers in the
+  cache. Updates expiration dates cache, but is not memoized itself yet. "
   [request-url]
   (->> (client/get request-url (get-headers))
        (update-cache! request-url)))
 
-(def memoized-raw-http-call (memoize raw-http-get))
+(def memoized-cached-http-call (memoize cached-http-get))
 
 (defn get-cached-time
   [request-url]
@@ -140,9 +139,9 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
   [request-url]
   (let [cache @api-expiration-cache]
     (if (is-expired? (get cache request-url))
-      (do (memo/memo-clear! memoized-raw-http-call request-url)
-          (memoized-raw-http-call request-url))
-      (do (memoized-raw-http-call request-url)))))
+      (do (memo/memo-clear! memoized-cached-http-call request-url)
+          (memoized-cached-http-call request-url))
+      (do (memoized-cached-http-call request-url)))))
 
 ;; high-level interface, the friendly part. Use the stuff below.
 ;; ===========================================================================
@@ -151,13 +150,16 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
   "Grabs the corp-asset list for any given api key, if available. If not, an
   error will be thrown."
   [api-code v-key]
-  (throw (IllegalStateException. "Function not properly implemented yet.")))
+  (-> (create-authenticated-url "corp/assets" api-code v-key)
+      (api-request)
+      (xml-to-map)))
+;; TODO fix this, the key is wrong.
 
 (defn get-sov-map
   "Grbas and returns the giant XML abomination known as the soverignty
   map. Deal with ti at your own peril. At least it's cached for you.
   And it's a clojure map now. Should make it somehwat easier to deal with."
   []
-  (-> (make-request-url "map/sovereignty")
+  (-> (create-basic-request-url "map/sovereignty")
       (api-request)
       (xml-to-map)))

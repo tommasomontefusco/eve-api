@@ -6,7 +6,7 @@
   (testing "Making a base Request Url. Just for completeness' sake."
     (is (=
           "https://api.eveonline.com/test/request.xml.aspx"
-          (make-request-url "test/request"))))
+          (create-basic-request-url "test/request"))))
   (testing "Appending an API key-value pair to an url"
     (is (=
          "foo?keyID=bar&vCode=baz"
