@@ -156,31 +156,39 @@
 ;; high-level interface, the friendly part. Use the stuff below.
 ;; ===========================================================================
 
+(defn api-call
+  ([resource-identifier]
+   (-> (create-basic-request-url resource-identifier)
+       (api-request)
+       (xml-to-map)
+       (extract-rowset)
+       (:content)))
+  ([resource-identifier api-key v-code]
+    (-> (create-authenticated-url resource-identifier api-key v-code)
+        (api-request)
+        (xml-to-map)
+        (extract-rowset)
+        (:content)))
+  ([resource-indentifier api-key v-code char-id]
+    (-> (create-character-authenticated-url resource-indentifier api-key v-code char-id)
+        (api-request)
+        (xml-to-map)
+        (extract-rowset)
+        (:content))))
+
 (defn get-asset-list
   "Grabs the corp-asset list for any given api key, if available. If not, an
   error will be thrown."
-  [api-code v-key]
-  (-> (create-authenticated-url "char/AssetList" api-code v-key)
-      (api-request)
-      (xml-to-map)))
-;; TODO fix this, the key is wrong.
+  [api-key v-code]
+  (api-call "char/AssetList" api-key v-code))
 
 (defn get-sov-map
   "Grbas and returns the giant XML abomination known as the soverignty
   map. Deal with ti at your own peril. At least it's cached for you.
   And it's a clojure map now. Should make it somehwat easier to deal with."
   []
-  (-> (create-basic-request-url "Map/Sovereignty")
-      (api-request)
-      (xml-to-map)
-      (extract-rowset)
-      (:content)))
+  (api-call "Map/Sovereignty"))
 
 (defn get-server-status
   []
-  (->
-    (create-basic-request-url "server/ServerStatus")
-    (api-request)
-    (xml-to-map)
-    (extract-rowset)
-    (:content)))
+  (api-call "Server/ServerStatus"))
