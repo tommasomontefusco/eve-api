@@ -11,13 +11,15 @@
 ;; Header stuff, for HTTP calls.
 ;; ===========================================================================
 
-(def default-headers {:client-params {"http.useragent" "eve-xml library
-for Clojure. Cobbled together by Az, email: az4reus@gmail.com. I also hang out
-on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
+;(def default-headers {:client-params {"http.useragent" "eve-xml library
+;for Clojure. Cobbled together by Az, email: az4reus@gmail.com. I also hang out
+;on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
+
+(def default-headers {})
 
 (def headers-cache (atom default-headers))
 
-(defn get-headers [] (@headers-cache))
+(defn get-headers [] (deref headers-cache))
 
 (defn add-header
   "Adds a new header to the header cache, instead of replacing it wholesale,
@@ -37,6 +39,7 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
 
 (defn reset-headers!
   "Simply resets the headers cache to the default (a useragent for this lib)"
+  []
   (reset! headers-cache default-headers))
 
 ;; Make request URLs. Just some basic composition stuff.
@@ -96,10 +99,15 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
 (defn extract-xml-timestamp
   "Walks the XML of any eve API and extracts the timestamp. Used for caching
   expiration dates and making sure things don't suck."
-  [xml-result]
-  (-> (xml-to-map xml-result)
-      (get-in [0 :content 1 :content 0])
-      (clojure.string/trim)))
+  [api-result]
+  (->
+    (xml-to-map api-result)
+    (get-in [0 :content 2 :content 0])
+    (clojure.string/trim)))
+
+(defn extract-rowset
+  [full-xml-map]
+  (get-in full-xml-map [0 :content 1]))
 
 (defn update-cache!
   "Extracts and stores the timestamp from any given XML batch. Emits entered
@@ -113,7 +121,9 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
   "Uses clj-http to send a GET request to the URL, with the headers in the
   cache. Updates expiration dates cache, but is not memoized itself yet. "
   [request-url]
-  (->> (client/get request-url (get-headers))
+  (->> (client/get request-url     ;(get-headers)
+                   )
+       (:body)
        (update-cache! request-url)))
 
 (def memoized-cached-http-call (memoize cached-http-get))
@@ -150,7 +160,7 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
   "Grabs the corp-asset list for any given api key, if available. If not, an
   error will be thrown."
   [api-code v-key]
-  (-> (create-authenticated-url "corp/assets" api-code v-key)
+  (-> (create-authenticated-url "char/AssetList" api-code v-key)
       (api-request)
       (xml-to-map)))
 ;; TODO fix this, the key is wrong.
@@ -160,6 +170,17 @@ on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
   map. Deal with ti at your own peril. At least it's cached for you.
   And it's a clojure map now. Should make it somehwat easier to deal with."
   []
-  (-> (create-basic-request-url "map/sovereignty")
+  (-> (create-basic-request-url "Map/Sovereignty")
       (api-request)
-      (xml-to-map)))
+      (xml-to-map)
+      (extract-rowset)
+      (:content)))
+
+(defn get-server-status
+  []
+  (->
+    (create-basic-request-url "server/ServerStatus")
+    (api-request)
+    (xml-to-map)
+    (extract-rowset)
+    (:content)))

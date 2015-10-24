@@ -17,4 +17,9 @@
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (ex/get-sov-map))
+  (let [sov-map       (future (ex/get-sov-map))
+        server-status (future (ex/get-server-status))]
+    (println @sov-map)
+    (println @ex/api-expiration-cache)
+    (println @server-status)
+    (println @ex/api-expiration-cache)))
