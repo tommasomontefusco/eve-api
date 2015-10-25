@@ -1,6 +1,6 @@
-(ns siphonator.eve-xml-test
+(ns eve-api.eve-xml-test
   (:require [clojure.test :refer :all]
-            [siphonator.eve-xml :refer :all]))
+            [eve-api.eve-xml :refer :all]))
 
 (deftest making-urls-test
   (testing "Making a base Request Url. Just for completeness' sake."
@@ -57,6 +57,7 @@
 (deftest extracting-xml-timestamp
   (let [test-xml
         "<root>
+          <serverTime> foo bar </serverTime>
           <result>
             <foo> skjdfoas </foo>
           </result>

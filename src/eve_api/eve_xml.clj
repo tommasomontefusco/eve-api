@@ -1,4 +1,4 @@
-(ns siphonator.eve-xml
+(ns eve-api.eve-xml
   (:gen-class)
   (:require [clojure.xml :as xml]
             [clojure.zip :as zip]
@@ -91,12 +91,12 @@
   [timestamp]
   (joda-format/parse (joda-format/formatters :mysql) timestamp))
 
-(defn- cache-timestamp!
+(defn cache-timestamp!
   "Stores the timestamp in the expiration cache, parsed from the XML"
   [request-url timestamp]
   (swap! api-expiration-cache conj {request-url timestamp}))
 
-(defn- extract-xml-timestamp
+(defn extract-xml-timestamp
   "Walks the XML of any eve API and extracts the timestamp. Used for caching
   expiration dates and making sure things don't suck."
   [api-result]
@@ -105,7 +105,7 @@
     (get-in [0 :content 2 :content 0])
     (clojure.string/trim)))
 
-(defn- extract-rowset
+(defn extract-rowset
   [full-xml-map]
   (get-in full-xml-map [0 :content 1]))
 
@@ -117,7 +117,7 @@
        (cache-timestamp! request))
   xml-result)
 
-(defn- http-get
+(defn http-get
   "Uses clj-http to send a GET request to the URL, with the headers in the
   cache. Updates expiration dates cache, but is not memoized itself yet. "
   [request-url]

@@ -1,6 +1,6 @@
-(ns siphonator.core
+(ns eve-api.core
   (:gen-class)
-  (:require [siphonator.eve-xml :as ex]))
+  (:require [eve-api.eve-xml :as ex]))
 
 (defn make-fuelmap
   "Takes a container ID and the two subsequent seqs, then turns them into
