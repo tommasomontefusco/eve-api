@@ -70,7 +70,7 @@
   (-> (create-basic-request-url xml-api)
       (append-api-string api-key v-code)))
 
-(defn create-character-authenticated-url
+(defn create-char-authenticated-url
   "Makes a full personal query, API and character ID"
   [xml-api api-key v-code char-id]
   (-> (create-authenticated-url xml-api api-key v-code)
@@ -91,12 +91,12 @@
   [timestamp]
   (joda-format/parse (joda-format/formatters :mysql) timestamp))
 
-(defn cache-timestamp!
+(defn- cache-timestamp!
   "Stores the timestamp in the expiration cache, parsed from the XML"
   [request-url timestamp]
   (swap! api-expiration-cache conj {request-url timestamp}))
 
-(defn extract-xml-timestamp
+(defn- extract-xml-timestamp
   "Walks the XML of any eve API and extracts the timestamp. Used for caching
   expiration dates and making sure things don't suck."
   [api-result]
@@ -105,7 +105,7 @@
     (get-in [0 :content 2 :content 0])
     (clojure.string/trim)))
 
-(defn extract-rowset
+(defn- extract-rowset
   [full-xml-map]
   (get-in full-xml-map [0 :content 1]))
 
@@ -117,7 +117,7 @@
        (cache-timestamp! request))
   xml-result)
 
-(defn cached-http-get
+(defn- http-get
   "Uses clj-http to send a GET request to the URL, with the headers in the
   cache. Updates expiration dates cache, but is not memoized itself yet. "
   [request-url]
@@ -126,7 +126,7 @@
        (:body)
        (update-cache! request-url)))
 
-(def memoized-cached-http-call (memoize cached-http-get))
+(def memoized-http-get (memoize http-get))
 
 (defn get-cached-time
   [request-url]
@@ -145,36 +145,39 @@
           then (parse-timestamp previous-time-str-timestamp)]
       (joda-time/after? now then))))
 
-(defn api-request
+(defn cached-http-get
   [request-url]
   (let [cache @api-expiration-cache]
     (if (is-expired? (get cache request-url))
-      (do (memo/memo-clear! memoized-cached-http-call request-url)
-          (memoized-cached-http-call request-url))
-      (do (memoized-cached-http-call request-url)))))
+      (do (memo/memo-clear! memoized-http-get request-url)
+          (memoized-http-get request-url))
+      (do (memoized-http-get request-url)))))
 
 ;; high-level interface, the friendly part. Use the stuff below.
 ;; ===========================================================================
 
 (defn api-call
-  ([resource-identifier]
-   (-> (create-basic-request-url resource-identifier)
-       (api-request)
+  ([xml-uri]
+   (-> (create-basic-request-url xml-uri)
+       (cached-http-get)
        (xml-to-map)
        (extract-rowset)
-       (:content)))
-  ([resource-identifier api-key v-code]
-    (-> (create-authenticated-url resource-identifier api-key v-code)
-        (api-request)
+       (:content)
+       (first)))
+  ([xml-uri api-key v-code]
+    (-> (create-authenticated-url xml-uri api-key v-code)
+        (cached-http-get)
         (xml-to-map)
         (extract-rowset)
-        (:content)))
-  ([resource-indentifier api-key v-code char-id]
-    (-> (create-character-authenticated-url resource-indentifier api-key v-code char-id)
-        (api-request)
+        (:content)
+        (first)))
+  ([xml-uri api-key v-code char-id]
+    (-> (create-char-authenticated-url xml-uri api-key v-code char-id)
+        (cached-http-get)
         (xml-to-map)
         (extract-rowset)
-        (:content))))
+        (:content)
+        (first))))
 
 (defn get-asset-list
   "Grabs the corp-asset list for any given api key, if available. If not, an

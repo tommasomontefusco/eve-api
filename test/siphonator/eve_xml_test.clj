@@ -25,7 +25,7 @@
   (testing "Testing character authenticated call composition"
     (is (=
           "https://api.eveonline.com/test/request.xml.aspx?keyID=1&vCode=2&characterID=3"
-          (create-character-authenticated-url "test/request" 1 2 3)))))
+          (create-char-authenticated-url "test/request" 1 2 3)))))
 
 (deftest xml-to-map-test
   (testing "does it parse XML as expected?"
