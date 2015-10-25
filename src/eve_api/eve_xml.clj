@@ -11,11 +11,7 @@
 ;; Header stuff, for HTTP calls.
 ;; ===========================================================================
 
-;(def default-headers {:client-params {"http.useragent" "eve-xml library
-;for Clojure. Cobbled together by Az, email: az4reus@gmail.com. I also hang out
-;on Tweetfleet Slack, tell Foxfour to poke me. Come say hi :3"}})
-
-(def default-headers {})
+(def default-headers {:client-params {"http.useragent" "github.com/az4reus/eve-api"}})
 
 (def headers-cache (atom default-headers))
 
@@ -121,8 +117,7 @@
   "Uses clj-http to send a GET request to the URL, with the headers in the
   cache. Updates expiration dates cache, but is not memoized itself yet. "
   [request-url]
-  (->> (client/get request-url     ;(get-headers)
-                   )
+  (->> (client/get request-url (get-headers))
        (:body)
        (update-cache! request-url)))
 
