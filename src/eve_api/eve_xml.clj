@@ -160,19 +160,19 @@
        (:content)
        (first)))
   ([xml-uri api-key v-code]
-    (-> (create-authenticated-url xml-uri api-key v-code)
-        (cached-http-get)
-        (xml-to-map)
-        (extract-rowset)
-        (:content)
-        (first)))
+   (-> (create-authenticated-url xml-uri api-key v-code)
+       (cached-http-get)
+       (xml-to-map)
+       (extract-rowset)
+       (:content)
+       (first)))
   ([xml-uri api-key v-code char-id]
-    (-> (create-char-authenticated-url xml-uri api-key v-code char-id)
-        (cached-http-get)
-        (xml-to-map)
-        (extract-rowset)
-        (:content)
-        (first))))
+   (-> (create-char-authenticated-url xml-uri api-key v-code char-id)
+       (cached-http-get)
+       (xml-to-map)
+       (extract-rowset)
+       (:content)
+       (first))))
 
 (defn get-asset-list
   "Grabs the corp-asset list for any given api key, if available. If not, an
