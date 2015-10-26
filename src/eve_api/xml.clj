@@ -1,4 +1,4 @@
-(ns eve-api.eve-xml
+(ns eve-api.xml
   (:gen-class)
   (:require [clojure.xml :as xml]
             [clojure.zip :as zip]

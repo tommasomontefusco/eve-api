@@ -1,6 +1,6 @@
 (ns eve-api.core
   (:gen-class)
-  (:require [eve-api.eve-xml :as ex]))
+  (:require [eve-api.xml :as ex]))
 
 (defn make-fuelmap
   "Takes a container ID and the two subsequent seqs, then turns them into

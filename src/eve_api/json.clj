@@ -1,4 +1,4 @@
-(ns eve-api.eve-json
+(ns eve-api.json
   (:require [cheshire.core :as ch]
             [clj-time.core :as joda-time]
             [clj-time.format :as joda-format]
