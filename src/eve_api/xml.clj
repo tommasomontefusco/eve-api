@@ -4,8 +4,8 @@
             [clojure.zip :as zip]
             [clj-http.client :as client]
             [clojure.core.memoize :as memo]
-            [clj-time.core :as joda-time]
-            [clj-time.format :as joda-format]
+            [clj-time.core :as time]
+            [clj-time.format :as t-format]
 
             [eve-api.util :refer :all])
   (:import (java.io ByteArrayInputStream)))
@@ -23,7 +23,7 @@
 (defn parse-timestamp
   "Extracts the timestamp from the full xml result. Returns a clj-time object."
   [timestamp]
-  (joda-format/parse (joda-format/formatters :mysql) timestamp))
+  (t-format/parse (t-format/formatters :mysql) timestamp))
 
 (defn cache-timestamp!
   "Stores the timestamp in the expiration cache, parsed from the XML"
@@ -68,15 +68,15 @@
 (defn cached-until
   "simply returns the cached value as a joda-time/Interval to joda-time/now."
   [request-url]
-  (joda-time/minus (get-cached-time request-url) (joda-time/now)))
+  (time/minus (get-cached-time request-url) (time/now)))
 
 (defn is-expired?
   [previous-time-str-timestamp]
   (if (nil? previous-time-str-timestamp)
     true
-    (let [now  (joda-time/now)
+    (let [now  (time/now)
           then (parse-timestamp previous-time-str-timestamp)]
-      (joda-time/after? now then))))
+      (time/after? now then))))
 
 (defn cached-http-get
   [request-url]
