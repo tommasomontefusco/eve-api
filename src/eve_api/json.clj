@@ -15,6 +15,10 @@
   [time-interval-object]
   (joda-format/unparse (joda-format/formatters :mysql) time-interval-object))
 
+(defn parse-time-str
+  [time-str]
+  (joda-format/parse (joda-format/formatters :mysql) time-str))
+
 (defn store-url-expiration
   [url expiration-str]
   (swap! json-expiration-cache conj {url expiration-str}))
@@ -24,8 +28,8 @@
   (->> (unparse-time-interval clj-time-object)
        (store-url-expiration url)))
 
-(defn http-get
+(defn http-get-json
   [url]
   (client/get url {:as :json}))
 
-(def memo-http-get (clojure.core.memoize/memo http-get))
+(def memo-http-get-json (clojure.core.memoize/memo http-get-json))
