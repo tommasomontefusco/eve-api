@@ -1,4 +1,5 @@
-(ns eve-api.util)
+(ns eve-api.util
+  (:gen-class))
 
 ;; Make request URLs. Just some basic composition stuff.
 ;; ============================================================================

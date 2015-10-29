@@ -8,8 +8,8 @@
   [container-id items quantities]
   (if-not (= (count items) (count quantities))
     (throw (IllegalArgumentException. "Two given lists are not equally long.")))
-  {:container container-id
-   :items items
+  {:container  container-id
+   :items      items
    :quantities quantities})
 
 ;; Main function. Please keep at the last spot <3
