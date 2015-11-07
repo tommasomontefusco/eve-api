@@ -10,6 +10,40 @@
             [eve-api.util :refer :all])
   (:import (java.io ByteArrayInputStream)))
 
+;; Make request URLs. Just some basic composition stuff.
+;; ============================================================================
+
+(defn append-api-string
+  "Simple helper method to append the API verification string at the end of
+  an XML-API call when needed."
+  [base-request api-key v-code]
+  (str base-request "?keyID=" api-key "&vCode=" v-code))
+
+(defn append-character-id
+  "Another simple helper adding the character string to an existing URL."
+  [base-request character-id]
+  (if-not (re-find #"\?" base-request)
+    (str base-request "?characterID=" character-id)
+    (str base-request "&characterID=" character-id)))
+
+(defn create-basic-request-url
+  "Another simple helper function to create the basic request url, eg
+  'map/sovereignty'"
+  [xml-api-request]
+  (str "https://api.eveonline.com/" xml-api-request ".xml.aspx"))
+
+(defn create-authenticated-url
+  "Composition of a few functions to make authed calls easier"
+  [xml-api api-key v-code]
+  (-> (create-basic-request-url xml-api)
+      (append-api-string api-key v-code)))
+
+(defn create-char-authenticated-url
+  "Makes a full personal query, API and character ID"
+  [xml-api api-key v-code char-id]
+  (-> (create-authenticated-url xml-api api-key v-code)
+      (append-character-id char-id)))
+
 ;; Impure I/O stuff, mostly concerned with handling the calls and the XML.
 ;; ============================================================================
 
@@ -112,11 +146,38 @@
        (:content)
        (first))))
 
-(defn get-asset-list
-  "Grabs the corp-asset list for any given api key, if available. If not, an
-  error will be thrown."
+;; Concrete endpoints. Aka the really fuckin' boring shit. Or interesting, if
+;; you don't have to write it.
+;; ============================================================================
+
+(defn get-account-status
   [api-key v-code]
-  (api-call "char/AssetList" api-key v-code))
+  (api-call "account/AccountStatus" api-key v-code))
+
+(defn get-api-key-info
+  [api-key v-code]
+  (api-call "account/APIKeyInfo" api-key v-code))
+
+(defn get-characters
+  [api-key v-code]
+  (api-call "account/Characters" api-key v-code))
+
+(defn get-call-list
+  []
+  (api-call "api/CallList"))
+
+(defn get-account-balance
+  [api-key v-code]
+  (api-call "char/AccountBalance" api-key v-code))
+
+;; TODO introduce another flag to be able to request flat response xml.
+(defn get-asset-list
+  [api-key v-code char-id ]
+  (api-call "char/AssetList" api-key v-code char-id))
+
+(defn get-char-bookmarks
+  [api-key v-code]
+  (api-call "char/Bookmarks" api-key v-code))
 
 (defn get-sov-map
   "Grbas and returns the giant XML abomination known as the soverignty
@@ -128,3 +189,4 @@
 (defn get-server-status
   []
   (api-call "Server/ServerStatus"))
+
