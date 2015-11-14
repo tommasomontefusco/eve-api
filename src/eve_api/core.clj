@@ -12,14 +12,13 @@
    :items      items
    :quantities quantities})
 
-;; Main function. Please keep at the last spot <3
-
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
   (let [sov-map       (future (ex/get-sov-map))
-        server-status (future (ex/get-server-status))]
+        server-status (future (ex/get-server-status))
+        call-list     (future (ex/get-call-list))]
     (println @sov-map)
-    (println @ex/api-expiration-cache)
+    (println @call-list)
     (println @server-status)
     (println @ex/api-expiration-cache)))

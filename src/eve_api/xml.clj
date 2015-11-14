@@ -13,21 +13,29 @@
 ;; Make request URLs. Just some basic composition stuff.
 ;; ============================================================================
 
-(defn append-api-string
+(defn has-questionmark? [s]
+  (not (= (.indexOf s "?")
+           -1)))
+
+(defn with-api-key
   "Simple helper method to append the API verification string at the end of
   an XML-API call when needed."
   [base-request api-key v-code]
   (str base-request "?keyID=" api-key "&vCode=" v-code))
 
-(defn append-character-id
-  "Another simple helper adding the character string to an existing URL."
-  [base-request character-id]
-  (if-not (re-find #"\?" base-request)
-    (str base-request "?characterID=" character-id)
-    (str base-request "&characterID=" character-id)))
+(defn with-flat-response [base-url]
+  (str base-url "&flat=1"))
+
+(defn with-market-order [base-url market-order]
+  (str base-url "&MarketOrder=" market-order))
+
+(defn with-character-id [base-url char-id]
+  (if (has-questionmark? base-url)
+    (str base-url "&CharacterID=" char-id)
+    (str base-url "?CharacterID=" char-id)))
 
 (defn create-basic-request-url
-  "Another simple helper function to create the basic request url, eg
+  "Another simple helper function to create the basic request url, e.g.
   'map/sovereignty'"
   [xml-api-request]
   (str "https://api.eveonline.com/" xml-api-request ".xml.aspx"))
@@ -36,13 +44,13 @@
   "Composition of a few functions to make authed calls easier"
   [xml-api api-key v-code]
   (-> (create-basic-request-url xml-api)
-      (append-api-string api-key v-code)))
+      (with-api-key api-key v-code)))
 
 (defn create-char-authenticated-url
   "Makes a full personal query, API and character ID"
   [xml-api api-key v-code char-id]
   (-> (create-authenticated-url xml-api api-key v-code)
-      (append-character-id char-id)))
+      (with-character-id char-id)))
 
 ;; Impure I/O stuff, mostly concerned with handling the calls and the XML.
 ;; ============================================================================
@@ -68,10 +76,9 @@
   "Walks the XML of any eve API and extracts the timestamp. Used for caching
   expiration dates and making sure things don't suck."
   [api-result]
-  (->
-    (xml-to-map api-result)
-    (get-in [0 :content 2 :content 0])
-    (clojure.string/trim)))
+  (-> (xml-to-map api-result)
+      (get-in [0 :content 2 :content 0])
+      (clojure.string/trim)))
 
 (defn extract-rowset
   [full-xml-map]
@@ -118,37 +125,37 @@
     (if (is-expired? (get cache request-url))
       (do (memo/memo-clear! memoized-http-get request-url)
           (memoized-http-get request-url))
-      (do (memoized-http-get request-url)))))
+      (memoized-http-get request-url))))
 
 ;; high-level interface, the friendly part. Use the stuff below.
 ;; ===========================================================================
 
+(defn- request-url [url]
+  (-> (cached-http-get url)
+      (xml-to-map)
+      (extract-rowset)
+      (:content)))
+
 (defn api-call
   ([xml-uri]
    (-> (create-basic-request-url xml-uri)
-       (cached-http-get)
-       (xml-to-map)
-       (extract-rowset)
-       (:content)
-       (first)))
+       (request-url)))
   ([xml-uri api-key v-code]
-   (-> (create-authenticated-url xml-uri api-key v-code)
-       (cached-http-get)
-       (xml-to-map)
-       (extract-rowset)
-       (:content)
-       (first)))
+   (-> (create-basic-request-url xml-uri)
+       (with-api-key api-key v-code)
+       (request-url)))
   ([xml-uri api-key v-code char-id]
-   (-> (create-char-authenticated-url xml-uri api-key v-code char-id)
-       (cached-http-get)
-       (xml-to-map)
-       (extract-rowset)
-       (:content)
-       (first))))
+   (-> (create-basic-request-url xml-uri)
+       (with-api-key api-key v-code)
+       (with-character-id char-id)
+       (request-url))))
 
 ;; Concrete endpoints. Aka the really fuckin' boring shit. Or interesting, if
 ;; you don't have to write it.
 ;; ============================================================================
+
+;; Char Endpoints
+;; ----------------------------------------------------------------------------
 
 (defn get-account-status
   [api-key v-code]
@@ -162,8 +169,7 @@
   [api-key v-code]
   (api-call "account/Characters" api-key v-code))
 
-(defn get-call-list
-  []
+(defn get-call-list []
   (api-call "api/CallList"))
 
 (defn get-account-balance
@@ -172,12 +178,41 @@
 
 ;; TODO introduce another flag to be able to request flat response xml.
 (defn get-asset-list
-  [api-key v-code char-id ]
+  [api-key v-code char-id]
   (api-call "char/AssetList" api-key v-code char-id))
 
 (defn get-char-bookmarks
   [api-key v-code]
   (api-call "char/Bookmarks" api-key v-code))
+
+(defn get-char-chat-channels
+  [api-key v-code]
+  (api-call "char/ChatChannels" api-key v-code))
+
+(defn get-char-contact-list
+  [api-key v-code char-id]
+  (api-call "char/ContactList" api-key v-code char-id))
+
+;; TODO Introduce &marketOrder=12321 flag.
+(defn get-market-orders
+  [api-key v-code]
+  (api-call "char/MarketOrders" api-key v-code))
+
+(defn get-char-contact-notifications
+  [api-key v-code char-id]
+  (api-call "char/ContactNotifications" api-key v-code char-id))
+
+;; Corp Endpoints.
+;; ----------------------------------------------------------------------------
+
+(defn get-corp-account-balance
+  [api-key v-code char-id]
+  (api-call "corp/AccountBalance" api-key v-code char-id))
+
+;; TODO Add the rest of endpoints, I guess.
+
+;; Global endpoints
+;; ----------------------------------------------------------------------------
 
 (defn get-sov-map
   "Grbas and returns the giant XML abomination known as the soverignty
@@ -186,7 +221,6 @@
   []
   (api-call "Map/Sovereignty"))
 
-(defn get-server-status
-  []
+(defn get-server-status []
   (api-call "Server/ServerStatus"))
 
