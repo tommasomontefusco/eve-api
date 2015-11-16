@@ -21,7 +21,9 @@
   "Simple helper method to append the API verification string at the end of
   an XML-API call when needed."
   [base-request api-key v-code]
-  (str base-request "?keyID=" api-key "&vCode=" v-code))
+  (if (has-questionmark? base-request)
+    (str base-request "&keyID=" api-key "&vCode=" v-code)
+    (str base-request "?keyID=" api-key "&vCode=" v-code)))
 
 (defn with-flat-response [base-url]
   (str base-url "&flat=1"))
@@ -39,18 +41,6 @@
   'map/sovereignty'"
   [xml-api-request]
   (str "https://api.eveonline.com/" xml-api-request ".xml.aspx"))
-
-(defn create-authenticated-url
-  "Composition of a few functions to make authed calls easier"
-  [xml-api api-key v-code]
-  (-> (create-basic-request-url xml-api)
-      (with-api-key api-key v-code)))
-
-(defn create-char-authenticated-url
-  "Makes a full personal query, API and character ID"
-  [xml-api api-key v-code char-id]
-  (-> (create-authenticated-url xml-api api-key v-code)
-      (with-character-id char-id)))
 
 ;; Impure I/O stuff, mostly concerned with handling the calls and the XML.
 ;; ============================================================================
@@ -176,10 +166,16 @@
   [api-key v-code]
   (api-call "char/AccountBalance" api-key v-code))
 
-;; TODO introduce another flag to be able to request flat response xml.
 (defn get-asset-list
-  [api-key v-code char-id]
-  (api-call "char/AssetList" api-key v-code char-id))
+  "Requests asset list."
+  [api-key v-code char-id & {flat :flat}]
+  (if flat
+    (do (-> (create-basic-request-url "char/AssetList")
+            (with-api-key api-key v-code)
+            (with-character-id char-id)
+            (with-flat-response)
+            (request-url)))
+    (api-call "char/AssetList" api-key v-code char-id)))
 
 (defn get-char-bookmarks
   [api-key v-code]
@@ -193,10 +189,15 @@
   [api-key v-code char-id]
   (api-call "char/ContactList" api-key v-code char-id))
 
-;; TODO Introduce &marketOrder=12321 flag.
 (defn get-market-orders
-  [api-key v-code]
-  (api-call "char/MarketOrders" api-key v-code))
+  [api-key v-code char-id & {market-order :market-order}]
+  (if (nil? market-order)
+    (api-call "char/MarketOrders" api-key v-code)
+    (do (-> (create-basic-request-url "char/MarketOrders")
+            (with-api-key api-key v-code)
+            (with-character-id char-id)
+            (with-market-order market-order)
+            (request-url)))))
 
 (defn get-char-contact-notifications
   [api-key v-code char-id]
@@ -216,8 +217,7 @@
 
 (defn get-sov-map
   "Grbas and returns the giant XML abomination known as the soverignty
-  map. Deal with ti at your own peril. At least it's cached for you.
-  And it's a clojure map now. Should make it somehwat easier to deal with."
+  map. Deal with ti at your own peril."
   []
   (api-call "Map/Sovereignty"))
 

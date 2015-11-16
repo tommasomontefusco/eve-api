@@ -32,9 +32,7 @@
 (defn cache-url-expiration
   ([url clj-time-object]
    (->> (unparse-time-interval clj-time-object)
-        (store-url-expiration url)))
-  ([url expiration-timestamp]
-    (store-url-expiration url expiration-timestamp)))
+        (store-url-expiration url))))
 
 (defn http-get-json
   [url]
